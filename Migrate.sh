@@ -130,6 +130,7 @@ while IFS="," read -r repo_name repo_description repo_Status repo_type; do
 
                 #------------------Migrate End---------------------
 
+                
                 echo "creating $repo_name in group: $project."
                 #create project in group
                 git push --set-upstream git@gitlab.jmmb.com:$project/$(git rev-parse --show-toplevel | xargs basename).git $(git rev-parse --abbrev-ref HEAD) 
@@ -138,15 +139,11 @@ while IFS="," read -r repo_name repo_description repo_Status repo_type; do
                 #git remote add origin $remoteOrigin #runs the git remote command
                 git remote add origin $remoteOrigin
 
-                branch_name=($(git branch -a | grep -v --invert-match remotes/origin/tags/ | grep -v --invert-match "@" | awk '{gsub("remotes/origin/","");print $1}')) 
-                tag_name=($(git branch -a | grep remotes/origin/tags/ | grep -v --invert-match "@" | grep -v HEAD | awk '{gsub("remotes/origin/tags/","");print $1}')) 
-
                 #change the default branch
                 git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main 
-                #change the default branch
-                #git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
-                #Update your local repository to track the new main branch:
 
+                branch_name=($(git branch -a | grep -v --invert-match remotes/origin/tags/ | grep -v --invert-match "@" | awk '{gsub("remotes/origin/","");print $1}')) 
+                tag_name=($(git branch -a | grep remotes/origin/tags/ | grep -v --invert-match "@" | grep -v HEAD | awk '{gsub("remotes/origin/tags/","");print $1}')) 
 
                 #loop through the branches
                 echo "looping through branches" 
@@ -189,10 +186,9 @@ while IFS="," read -r repo_name repo_description repo_Status repo_type; do
                     join_folders="$join_folders $non_std_branches"
                 done
 
-                
 
                 cd migClone/
-                #Clone the SVN repository
+                #Clone the SVN repository with additional folders in repositories
                 git svn clone -r1:HEAD --no-minimize-url --stdlayout --no-metadata --authors-file Authors.txt $URL --trunk="trunk" --branches="branches/" $join_folders  --tags="tags/"
 
                 #navigate to dir where folder was created
@@ -249,6 +245,7 @@ while IFS="," read -r repo_name repo_description repo_Status repo_type; do
                 remoteOrigin=("git@gitlab.jmmb.com:$project/$repo_name.git")  
                 #git remote add origin $remoteOrigin #runs the git remote command
                 git remote add origin $remoteOrigin
+                status="Project-create"
 
                 branch_name=($(git branch -a | grep -v --invert-match remotes/origin/tags/ | grep -v --invert-match "@" | awk '{gsub("remotes/origin/","");print $1}')) 
                 tag_name=($(git branch -a | grep remotes/origin/tags/ | grep -v --invert-match "@" | grep -v HEAD | awk '{gsub("remotes/origin/tags/","");print $1}')) 
@@ -256,27 +253,15 @@ while IFS="," read -r repo_name repo_description repo_Status repo_type; do
                 #change the default branch
                 git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main 
                 git checkout -b main origin/trunk
-                #git fetch origin
-                #git checkout origin/main
-                #git merge --no-ff trunk
-                #git push -u origin main 
-                #change the default branch
-                #git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
-                #Update your local repository to track the new main branch:
-                #git fetch origin 
-                #git branch --set-upstream-to=origin/main main 
 
                 #loop through the branches
                 echo "looping through branches" 
                 for branch in "${branch_name[@]}" 
                 do
-                    echo "git checkout - branches"  
-                    git checkout -b $branch origin/$branch >> >(while read line; do echo "$(date): $line"; done >> ../../log.txt) 2>  >(while read line; do echo "$(date): $line"; done >> ../../error_log.txt)
-                    #git pull origin $branch     
-                    #git push origin $branch           
+                    echo "git checkout - branch"  
+                    git checkout -b $branch origin/$branch >> >(while read line; do echo "$(date): $line"; done >> ../../log.txt) 2>  >(while read line; do echo "$(date): $line"; done >> ../../error_log.txt)      
                 done
-                #git fetch origin main
-                #git pull    
+
                 git push --all >> >(while read line; do echo "$(date): $line"; done >> ../../log.txt) 2>  >(while read line; do echo "$(date): $line"; done >> ../../error_log.txt)
 
                 echo "git tag" 
@@ -286,8 +271,7 @@ while IFS="," read -r repo_name repo_description repo_Status repo_type; do
                 echo "git checkout- tags" 
                 for tag in "${tag_name[@]}" 
                 do             
-                    git checkout origin/tags/$tag #
-
+                    git checkout origin/tags/$tag 
                     echo "git tag -a tag -m "creating tag"" 
                     git tag -a $tag -m "migrated tag"  >> >(while read line; do echo "$(date): $line"; done >> ../../log.txt) 2>  >(while read line; do echo "$(date): $line"; done >> ../../error_log.txt)
                 done  
@@ -299,7 +283,7 @@ while IFS="," read -r repo_name repo_description repo_Status repo_type; do
     cd /workspace/libs/
     echo "------------------$repo_name migration complete ------------------" >> log.txt >> error_log.txt
     echo "$repo_name, $status" >> migration_results.txt  
-    echo "$repo_name, $repo_description, $repo_Status, $repo_type" >> completed_repositories.txt
+    echo "$repo_name, $repo_description, $repo_Status, $repo_type" >> completed_repositories.txt #update the last migrated repo
 done < "$repo_list"       
 
 
